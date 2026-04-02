@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
@@ -13,18 +14,42 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 MODELS_DIR = PROJECT_ROOT / "models"
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 LOGS_DIR = PROJECT_ROOT / "logs"
+HF_MODELS_DIR = PROJECT_ROOT / "hf_models"
+
+
+def _env_str(name: str, default: str) -> str:
+    value = os.getenv(name)
+    return value if value not in (None, "") else default
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass
 class ModelConfig:
-    model_name_or_path: str = str(Path.home() / "models" / "GigaChat3-10B-A1.8B-bf16")
-    tokenizer_name_or_path: Optional[str] = None
-    device: str = "cuda"
-    torch_dtype: str = "bfloat16"
-    trust_remote_code: bool = True
-    use_fast_tokenizer: bool = False
-    max_length: int = 2048
-    output_hidden_states: bool = True
+    model_name_or_path: str = field(
+        default_factory=lambda: _env_str(
+            "MODEL_NAME_OR_PATH",
+            str(HF_MODELS_DIR / "GigaChat3-10B-A1.8B-bf16"),
+        )
+    )
+    tokenizer_name_or_path: Optional[str] = field(
+        default_factory=lambda: _env_str(
+            "TOKENIZER_NAME_OR_PATH",
+            str(HF_MODELS_DIR / "GigaChat3-10B-A1.8B-tokenizer"),
+        )
+    )
+    device: str = field(default_factory=lambda: _env_str("MODEL_DEVICE", "cpu"))
+    torch_dtype: str = field(default_factory=lambda: _env_str("MODEL_TORCH_DTYPE", "float32"))
+    trust_remote_code: bool = field(default_factory=lambda: _env_bool("MODEL_TRUST_REMOTE_CODE", True))
+    use_fast_tokenizer: bool = field(default_factory=lambda: _env_bool("MODEL_USE_FAST_TOKENIZER", False))
+    max_length: int = field(default_factory=lambda: int(_env_str("MODEL_MAX_LENGTH", "2048")))
+    output_hidden_states: bool = field(default_factory=lambda: _env_bool("MODEL_OUTPUT_HIDDEN_STATES", True))
+    local_files_only: bool = field(default_factory=lambda: _env_bool("HF_LOCAL_FILES_ONLY", True))
 
 
 @dataclass
@@ -70,5 +95,6 @@ def ensure_project_dirs() -> None:
         MODELS_DIR,
         OUTPUTS_DIR,
         LOGS_DIR,
+        HF_MODELS_DIR,
     ]:
         path.mkdir(parents=True, exist_ok=True)

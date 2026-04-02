@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Optional
 
 import torch
@@ -54,15 +55,28 @@ class ModelWrapper:
         self.device = self.model_cfg.device
         self.dtype = _resolve_torch_dtype(self.model_cfg.torch_dtype)
 
+    def _validate_local_path(self, value: str, label: str) -> None:
+        path = Path(value)
+        if self.model_cfg.local_files_only and not path.exists():
+            raise FileNotFoundError(
+                f"{label} not found: {path}. "
+                f"Положи локальные файлы модели в эту папку или переопредели путь через переменные окружения."
+            )
+
     def load(self) -> None:
         logging.getLogger("transformers").setLevel(logging.ERROR)
 
         model_name = self.model_cfg.model_name_or_path
         tokenizer_name = self.model_cfg.tokenizer_name_or_path or model_name
 
+        self._validate_local_path(model_name, "Model path")
+        self._validate_local_path(tokenizer_name, "Tokenizer path")
+
         self.tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_name,
             trust_remote_code=self.model_cfg.trust_remote_code,
+            use_fast=self.model_cfg.use_fast_tokenizer,
+            local_files_only=self.model_cfg.local_files_only,
         )
 
         target_device = "cuda" if self.device == "cuda" and torch.cuda.is_available() else "cpu"
@@ -73,6 +87,7 @@ class ModelWrapper:
                 trust_remote_code=self.model_cfg.trust_remote_code,
                 torch_dtype=self.dtype,
                 low_cpu_mem_usage=True,
+                local_files_only=self.model_cfg.local_files_only,
             )
             self.model = self.model.to("cuda")
         else:
@@ -81,6 +96,7 @@ class ModelWrapper:
                 trust_remote_code=self.model_cfg.trust_remote_code,
                 torch_dtype=torch.float32,
                 low_cpu_mem_usage=True,
+                local_files_only=self.model_cfg.local_files_only,
             )
             self.model = self.model.to("cpu")
 

@@ -79,3 +79,50 @@ python predict.py --input <path> --output <path> --limit <N>
 ## ✅ Минимальный тест для комиссии
 
 pip install -r requirements.txt && python predict.py --input data/raw/knowledge_bench_public.csv --limit 3
+
+
+---
+
+## 🐳 Docker-запуск
+
+Проект докеризирован для показа комиссии одной командой.
+
+### Что нужно положить рядом с проектом
+
+Создай папку `hf_models` в корне проекта и положи туда локальные файлы:
+
+```text
+hf_models/
+├─ GigaChat3-10B-A1.8B-bf16/
+└─ GigaChat3-10B-A1.8B-tokenizer/
+```
+
+Именно эти папки ожидает `docker-compose.yml`.
+
+### Быстрый тест
+
+```bash
+docker compose --profile fast up --build
+```
+
+Результат появится в:
+
+```text
+outputs/submission.fast.csv
+```
+
+### Полный запуск
+
+```bash
+docker compose up --build
+```
+
+Результат появится в:
+
+```text
+outputs/submission.csv
+```
+
+### Почему это важно
+
+Контейнер работает в офлайн-режиме и не пытается скачать модель из Hugging Face во время показа. Если папка `hf_models` заполнена заранее, запуск у комиссии будет без ручной настройки.
