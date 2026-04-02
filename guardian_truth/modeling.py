@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -54,20 +55,34 @@ class ModelWrapper:
         self.dtype = _resolve_torch_dtype(self.model_cfg.torch_dtype)
 
     def load(self) -> None:
+        logging.getLogger("transformers").setLevel(logging.ERROR)
+
         model_name = self.model_cfg.model_name_or_path
         tokenizer_name = self.model_cfg.tokenizer_name_or_path or model_name
-
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            device_map="auto",
-            torch_dtype=self.dtype,
-            trust_remote_code=self.model_cfg.trust_remote_code,
-        )
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_name,
             trust_remote_code=self.model_cfg.trust_remote_code,
         )
+
+        target_device = "cuda" if self.device == "cuda" and torch.cuda.is_available() else "cpu"
+
+        if target_device == "cuda":
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                trust_remote_code=self.model_cfg.trust_remote_code,
+                torch_dtype=self.dtype,
+                low_cpu_mem_usage=True,
+            )
+            self.model = self.model.to("cuda")
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                trust_remote_code=self.model_cfg.trust_remote_code,
+                torch_dtype=torch.float32,
+                low_cpu_mem_usage=True,
+            )
+            self.model = self.model.to("cpu")
 
         self.model.eval()
 
