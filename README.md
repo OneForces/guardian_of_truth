@@ -78,5 +78,4 @@ python predict.py --input <path> --output <path> --limit <N>
 
 ## ✅ Минимальный тест для комиссии
 
-pip install -r requirements.txt
-python predict.py --input data/raw/knowledge_bench_public.csv --limit 3
+pip install -r requirements.txt && python predict.py --input data/raw/knowledge_bench_public.csv --limit 3
