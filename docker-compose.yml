@@ -4,19 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: guardian_of_truth
-    environment:
-      HF_HUB_OFFLINE: "1"
-      TRANSFORMERS_OFFLINE: "1"
-      HF_LOCAL_FILES_ONLY: "1"
-      MODEL_DEVICE: "cpu"
-      MODEL_TORCH_DTYPE: "float32"
-      MODEL_NAME_OR_PATH: /app/hf_models/GigaChat3-10B-A1.8B-bf16
-      TOKENIZER_NAME_OR_PATH: /app/hf_models/GigaChat3-10B-A1.8B-tokenizer
+    working_dir: /app
     volumes:
+      - ./data:/app/data
       - ./outputs:/app/outputs
-      - ./logs:/app/logs
-      - ./hf_models:/app/hf_models:ro
-    command: ["python", "predict.py", "--input", "data/raw/knowledge_bench_public.csv", "--output", "outputs/submission.csv"]
+    command: >
+      python predict.py
+      --input data/raw/knowledge_bench_public.csv
+      --output outputs/submission.csv
 
   guardian-fast:
     build:

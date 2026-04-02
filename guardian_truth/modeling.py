@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Optional
 
 import torch
@@ -55,12 +55,11 @@ class ModelWrapper:
         self.device = self.model_cfg.device
         self.dtype = _resolve_torch_dtype(self.model_cfg.torch_dtype)
 
-    def _validate_local_path(self, value: str, label: str) -> None:
-        path = Path(value)
-        if self.model_cfg.local_files_only and not path.exists():
+    def _validate_local_path(self, path: str, label: str) -> None:
+        if not path or not os.path.isdir(path):
             raise FileNotFoundError(
                 f"{label} not found: {path}. "
-                f"Положи локальные файлы модели в эту папку или переопредели путь через переменные окружения."
+                "Модель не скачалась в образ или путь указан неверно."
             )
 
     def load(self) -> None:
@@ -75,8 +74,7 @@ class ModelWrapper:
         self.tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_name,
             trust_remote_code=self.model_cfg.trust_remote_code,
-            use_fast=self.model_cfg.use_fast_tokenizer,
-            local_files_only=self.model_cfg.local_files_only,
+            local_files_only=True,
         )
 
         target_device = "cuda" if self.device == "cuda" and torch.cuda.is_available() else "cpu"
@@ -87,7 +85,7 @@ class ModelWrapper:
                 trust_remote_code=self.model_cfg.trust_remote_code,
                 torch_dtype=self.dtype,
                 low_cpu_mem_usage=True,
-                local_files_only=self.model_cfg.local_files_only,
+                local_files_only=True,
             )
             self.model = self.model.to("cuda")
         else:
@@ -96,17 +94,13 @@ class ModelWrapper:
                 trust_remote_code=self.model_cfg.trust_remote_code,
                 torch_dtype=torch.float32,
                 low_cpu_mem_usage=True,
-                local_files_only=self.model_cfg.local_files_only,
+                local_files_only=True,
             )
             self.model = self.model.to("cpu")
 
         self.model.eval()
 
-    def build_batch(
-        self,
-        prompt: str,
-        response: str,
-    ) -> ForwardBatch:
+    def build_batch(self, prompt: str, response: str) -> ForwardBatch:
         if self.tokenizer is None:
             raise RuntimeError("Tokenizer is not loaded. Call load() first.")
 
@@ -115,15 +109,8 @@ class ModelWrapper:
 
         full_text = prompt + response
 
-        prompt_enc = self.tokenizer(
-            prompt,
-            return_tensors="pt",
-        )
-
-        full_enc = self.tokenizer(
-            full_text,
-            return_tensors="pt",
-        )
+        prompt_enc = self.tokenizer(prompt, return_tensors="pt")
+        full_enc = self.tokenizer(full_text, return_tensors="pt")
 
         input_ids = full_enc["input_ids"]
         attention_mask = full_enc["attention_mask"]
@@ -141,11 +128,7 @@ class ModelWrapper:
         )
 
     @torch.no_grad()
-    def forward(
-        self,
-        prompt: str,
-        response: str,
-    ) -> ForwardOutput:
+    def forward(self, prompt: str, response: str) -> ForwardOutput:
         if self.model is None or self.tokenizer is None:
             raise RuntimeError("Model is not loaded. Call load() first.")
 

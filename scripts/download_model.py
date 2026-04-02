@@ -2,7 +2,7 @@ from pathlib import Path
 from huggingface_hub import snapshot_download
 
 MODEL_ID = "ai-sage/GigaChat3-10B-A1.8B-bf16"
-LOCAL_DIR = Path.home() / "models" / "GigaChat3-10B-A1.8B-bf16"
+LOCAL_DIR = Path("/app/hf_models/GigaChat3-10B-A1.8B-bf16")
 
 
 def main():
