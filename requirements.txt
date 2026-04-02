@@ -1,0 +1,10 @@
+torch>=2.0
+transformers>=4.40
+accelerate>=0.30
+sentencepiece
+safetensors
+numpy
+pandas
+scikit-learn
+tqdm
+joblib
